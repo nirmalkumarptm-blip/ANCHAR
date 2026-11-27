@@ -560,3 +560,38 @@ body {
     font-size: 12px;
     font-weight: 600;
 }
+
+
+/* =================================
+   ANCHAR - FOLDER & DOCUMENT BUTTONS
+================================= */
+
+.saved-document button,
+#back-folder {
+    background: linear-gradient(135deg, #c9a45c, #987638);
+    color: #0b0b0b;
+    border: 1px solid #dfc17e;
+    border-radius: 8px;
+    padding: 9px 16px;
+    margin: 6px 5px 6px 0;
+    font-family: Georgia, serif;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.saved-document button:hover,
+#back-folder:hover {
+    background: #0b0b0b;
+    color: #dfc17e;
+    border: 1px solid #dfc17e;
+    box-shadow: 0 0 10px rgba(201, 164, 92, 0.3);
+    transform: translateY(-2px);
+}
+
+.saved-document button:active,
+#back-folder:active {
+    transform: scale(0.96);
+}
+
