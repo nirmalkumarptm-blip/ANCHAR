@@ -308,3 +308,37 @@ document.addEventListener("click", (event) => {
     }
 
 });
+
+
+/* PDF FILE PICKER */
+
+const pdfInput = document.createElement("input");
+
+pdfInput.type = "file";
+pdfInput.accept = "application/pdf,.pdf";
+pdfInput.style.display = "none";
+
+document.body.appendChild(pdfInput);
+
+document.addEventListener("click", (event) => {
+
+    if (event.target.closest("#choose-pdf")) {
+        pdfInput.click();
+    }
+
+});
+
+pdfInput.addEventListener("change", () => {
+
+    const file = pdfInput.files[0];
+
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+        alert("Please select a PDF file.");
+        return;
+    }
+
+    alert("PDF selected: " + file.name);
+
+});
