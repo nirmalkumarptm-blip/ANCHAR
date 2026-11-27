@@ -466,3 +466,27 @@ body {
     margin-top: 10px;
     font: 13px Arial, sans-serif;
 }
+
+
+/* ADD DOCUMENT BUTTON */
+
+.document-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 25px 0;
+}
+
+.add-document-btn {
+    padding: 13px 22px;
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    background: linear-gradient(135deg, #c6a45c, #8d7037);
+    color: #0b0b0b;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.add-document-btn:hover {
+    background: var(--gold-light);
+}
