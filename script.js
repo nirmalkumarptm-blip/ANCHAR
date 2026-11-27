@@ -98,6 +98,7 @@ document.addEventListener("click", (event) => {
 
 });
 
+
 function showDashboard() {
 
     const app = document.getElementById("app");
@@ -126,9 +127,8 @@ function showDashboard() {
             <section class="profile-section">
                 <p class="section-label">PERSONAL VAULT</p>
 
-                <div class="profile-card">
+                <div class="profile-card" id="open-profile">
                     <div class="profile-shield">AN</div>
-
                     <h2>NIRMAL</h2>
 
                     <div class="document-count">
@@ -137,22 +137,45 @@ function showDashboard() {
                     </div>
 
                     <p class="profile-status">MAIN ADMIN</p>
+                    <small class="open-hint">TAP TO OPEN VAULT</small>
                 </div>
             </section>
 
+        </main>
+    `;
+}
+
+function showCategories() {
+
+    const app = document.getElementById("app");
+
+    const categories = [
+        "Aadhaar",
+        "PAN Card",
+        "Bank",
+        "Certificates",
+        "Insurance",
+        "Driving Licence"
+    ];
+
+    app.innerHTML = `
+        <main class="dashboard">
+
+            <header class="dashboard-header">
+                <div class="brand">
+                    <span class="brand-shield">AN</span>
+                    <h1>ANCHAR</h1>
+                </div>
+
+                <button class="settings-btn" id="back-home">←</button>
+            </header>
+
             <section class="categories-section">
-                <h2>Document Categories</h2>
-                <p>Select a category to manage documents</p>
+                <h2>NIRMAL'S DOCUMENTS</h2>
+                <p>Select a document category</p>
 
                 <div class="category-grid">
-                    ${[
-                        "Aadhaar",
-                        "PAN Card",
-                        "Bank",
-                        "Certificates",
-                        "Insurance",
-                        "Driving Licence"
-                    ].map((name, index) => `
+                    ${categories.map((name, index) => `
                         <button class="category-card">
                             <span class="category-number">
                                 ${String(index + 1).padStart(2, "0")}
@@ -166,3 +189,15 @@ function showDashboard() {
         </main>
     `;
 }
+
+document.addEventListener("click", (event) => {
+
+    if (event.target.closest("#open-profile")) {
+        showCategories();
+    }
+
+    if (event.target.closest("#back-home")) {
+        showDashboard();
+    }
+
+});
