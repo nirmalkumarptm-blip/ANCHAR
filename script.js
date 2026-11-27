@@ -8,6 +8,7 @@ const SPLASH_DURATION = 2000;
 
 let enteredPin = "";
 let activeCategory = "";
+let activeFolderId = null;
 let database = null;
 
 const categories = [
@@ -27,7 +28,7 @@ function openDatabase() {
 
     return new Promise((resolve, reject) => {
 
-        const request = indexedDB.open("ANCHAR_VAULT", 1);
+        const request = indexedDB.open("ANCHAR_VAULT", 2);
 
         request.onupgradeneeded = (event) => {
 
@@ -39,6 +40,13 @@ function openDatabase() {
                     keyPath: "id",
                     autoIncrement: true
                 });
+
+               if (!db.objectStoreNames.contains("folders")) {
+               db.createObjectStore("folders", {
+               keyPath: "id",
+               autoIncrement: true
+    });
+}
 
             }
 
@@ -56,7 +64,7 @@ function openDatabase() {
 }
 
 
-function saveDocument(file, name, category, tags = []) {
+function saveDocument(file, name, category, tags = [], folderId = null) {
 
     return new Promise((resolve, reject) => {
 
@@ -72,6 +80,7 @@ function saveDocument(file, name, category, tags = []) {
             category: category,
             file: file,
             tags: tags,
+            folderId: folderId,
             createdAt: new Date().toISOString()
         });
 
@@ -331,13 +340,23 @@ function showCategories() {
    DOCUMENT SCREEN
 ================================= */
 
+
 async function showDocuments(category) {
 
     activeCategory = category;
 
     const app = document.getElementById("app");
 
-    const documents = await getDocuments(category);
+    const allDocuments = await getDocuments(category);
+
+const documents = allDocuments.filter(doc =>
+    (doc.folderId || null) === activeFolderId
+);
+
+const folders = await getFolders(category, activeFolderId);
+   const currentFolder = activeFolderId
+    ? await getFolderById(activeFolderId)
+    : null;
 
     app.innerHTML = `
         <main class="dashboard">
@@ -359,17 +378,55 @@ async function showDocuments(category) {
 
                 <p class="section-label">NIRMAL'S VAULT</p>
 
-                <h2>${category}</h2>
+                <h2>${escapeHTML(category)}</h2>
 
-                <p>Your ${category} documents</p>
+                ${currentFolder ? `
+    <button id="back-folder">
+        ← Back to Parent Folder
+    </button>
+` : ""}
+
+                <p>Your ${escapeHTML(category)} documents</p>
 
                 <div class="document-actions">
+
+                    <button class="add-document-btn" id="create-folder">
+                        + Create Folder
+                    </button>
+
                     <button class="add-document-btn" id="add-document">
                         + Add Document
                     </button>
+
                 </div>
 
                 <div class="saved-documents">
+
+                    ${folders.length ? folders.map(folder => `
+                        <div class="saved-document">
+
+                            <h3>📁 ${escapeHTML(folder.name)}</h3>
+
+                            <button data-open-folder="${folder.id}">
+                                Open Folder
+                            </button>
+
+                            <p>Folder</p>
+
+                            <button data-rename-folder="${folder.id}">
+                                Rename
+                            </button>
+
+                            <button data-create-subfolder="${folder.id}">
+                                + Subfolder
+                            </button>
+
+                            <button data-delete-folder="${folder.id}">
+                                Delete
+                            </button>
+
+                        </div>
+                    `).join("") : ""}
 
                     ${documents.length ? documents.map(doc => `
                         <div class="saved-document">
@@ -379,9 +436,11 @@ async function showDocuments(category) {
                             <p>PDF Document</p>
 
                             <div class="document-tags">
-                            ${(doc.tags || []).map(tag => `
-                            <span class="document-tag">${escapeHTML(tag)}</span>
-                            `).join("")}
+                                ${(doc.tags || []).map(tag => `
+                                    <span class="document-tag">
+                                        ${escapeHTML(tag)}
+                                    </span>
+                                `).join("")}
                             </div>
 
                             <button data-view="${doc.id}">
@@ -397,13 +456,15 @@ async function showDocuments(category) {
                             </button>
 
                         </div>
-                    `).join("") : `
+                    `).join("") : ""}
+
+                    ${!folders.length && !documents.length ? `
                         <div class="empty-documents">
                             <div class="empty-icon">◇</div>
                             <h3>No Documents Yet</h3>
-                            <p>Your documents will appear here.</p>
+                            <p>Your folders and documents will appear here.</p>
                         </div>
-                    `}
+                    ` : ""}
 
                 </div>
 
@@ -411,8 +472,8 @@ async function showDocuments(category) {
 
         </main>
     `;
-
 }
+
 
 function escapeHTML(value) {
 
@@ -529,11 +590,12 @@ async function askDocumentName(file, category) {
     try {
 
         await saveDocument(
-            file,
-            customName.trim(),
-            category,
-            tags
-        );
+    file,
+    name,
+    category,
+    tags,
+    activeFolderId
+);
 
         alert("Document saved successfully in ANCHAR!");
 
@@ -775,10 +837,11 @@ document.addEventListener("click", async (event) => {
 
     const categoryCard = target.closest("[data-category]");
 
-    if (categoryCard) {
-        showDocuments(categoryCard.dataset.category);
-        return;
-    }
+if (categoryCard) {
+    activeFolderId = null;
+    showDocuments(categoryCard.dataset.category);
+    return;
+}
 
     if (target.closest("#back-categories")) {
         showCategories();
@@ -849,4 +912,311 @@ if (deleteButton) {
 
 }
 
+   // Open Folder
+const openFolderButton = target.closest("[data-open-folder]");
+
+if (openFolderButton) {
+
+    activeFolderId = Number(
+        openFolderButton.dataset.openFolder
+    );
+
+    await showDocuments(activeCategory);
+
+    return;
+}
+
+   // Back to Parent Folder
+if (target.closest("#back-folder")) {
+
+    const currentFolder = await getFolderById(activeFolderId);
+
+    activeFolderId = currentFolder
+        ? currentFolder.parentId
+        : null;
+
+    await showDocuments(activeCategory);
+
+    return;
+}
+
+    // Create Folder
+    if (target.closest("#create-folder")) {
+
+        const folderName = prompt("Enter folder name:");
+
+        if (!folderName || !folderName.trim()) {
+            return;
+        }
+
+        try {
+            await createFolder(
+                folderName.trim(),
+                activeCategory
+            );
+
+            await showDocuments(activeCategory);
+
+        } catch (error) {
+            alert("Unable to create folder.");
+            console.error(error);
+        }
+
+        return;
+    }
+
+        
+    // Create Subfolder
+    const subfolderButton = target.closest("[data-create-subfolder]");
+
+    if (subfolderButton) {
+
+        const parentId = Number(
+            subfolderButton.dataset.createSubfolder
+        );
+
+        const folderName = prompt("Enter subfolder name:");
+
+        if (!folderName || !folderName.trim()) {
+            return;
+        }
+
+        try {
+            await createFolder(
+                folderName.trim(),
+                activeCategory,
+                parentId
+            );
+
+            alert("Subfolder created successfully!");
+
+        } catch (error) {
+            alert("Unable to create subfolder.");
+            console.error(error);
+        }
+
+        return;
+    }
+
+
+    // Rename Folder
+    const renameFolderButton = target.closest("[data-rename-folder]");
+
+    if (renameFolderButton) {
+
+        const folderId = renameFolderButton.dataset.renameFolder;
+
+        const newName = prompt("Enter new folder name:");
+
+        if (!newName || !newName.trim()) {
+            return;
+        }
+
+        try {
+            await renameFolder(
+                folderId,
+                newName.trim()
+            );
+
+            await showDocuments(activeCategory);
+
+        } catch (error) {
+            alert("Unable to rename folder.");
+            console.error(error);
+        }
+
+        return;
+    }
+
+    // Delete Folder
+    const deleteFolderButton = target.closest("[data-delete-folder]");
+
+    if (deleteFolderButton) {
+
+        const folderId = deleteFolderButton.dataset.deleteFolder;
+
+        const confirmed = confirm(
+            "Delete this folder permanently?"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await deleteFolder(folderId);
+
+            alert("Folder deleted.");
+
+            await showDocuments(activeCategory);
+
+        } catch (error) {
+            alert("Unable to delete folder.");
+            console.error(error);
+        }
+
+        return;
+    }
+   
+   
 });
+
+// =================================
+// ANCHAR - FOLDER MANAGEMENT
+// =================================
+
+function createFolder(name, category, parentId = null) {
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction("folders", "readwrite");
+        const store = transaction.objectStore("folders");
+
+        const request = store.add({
+            name: name,
+            category: category,
+            parentId: parentId,
+            createdAt: new Date().toISOString()
+        });
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+function getFolders(category, parentId = null) {
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction("folders", "readonly");
+        const store = transaction.objectStore("folders");
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+            const folders = request.result.filter(folder =>
+                folder.category === category &&
+                folder.parentId === parentId
+            );
+
+            resolve(folders);
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// Rename Folder
+function renameFolder(folderId, newName) {
+    return new Promise((resolve, reject) => {
+        const transaction = database.transaction("folders", "readwrite");
+        const store = transaction.objectStore("folders");
+        const request = store.get(Number(folderId));
+
+        request.onsuccess = () => {
+            const folder = request.result;
+
+            if (!folder) {
+                reject("Folder not found");
+                return;
+            }
+
+            folder.name = newName;
+
+            const updateRequest = store.put(folder);
+
+            updateRequest.onsuccess = () => resolve(true);
+            updateRequest.onerror = () => reject(updateRequest.error);
+        };
+
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// Delete Folder
+
+function deleteFolder(folderId) {
+    return new Promise((resolve, reject) => {
+
+        const transaction = database.transaction(
+            ["folders", "documents"],
+            "readwrite"
+        );
+
+        const folderStore = transaction.objectStore("folders");
+        const documentStore = transaction.objectStore("documents");
+
+        let folders;
+        let documents;
+        let processed = false;
+
+        function processDeletion() {
+            if (!folders || !documents || processed) return;
+
+            processed = true;
+
+            const folderIds = new Set([Number(folderId)]);
+
+            let changed = true;
+
+            while (changed) {
+                changed = false;
+
+                folders.forEach(folder => {
+                    if (
+                        folder.parentId !== null &&
+                        folderIds.has(Number(folder.parentId)) &&
+                        !folderIds.has(Number(folder.id))
+                    ) {
+                        folderIds.add(Number(folder.id));
+                        changed = true;
+                    }
+                });
+            }
+
+            folderIds.forEach(id => folderStore.delete(id));
+
+            documents.forEach(doc => {
+                if (folderIds.has(Number(doc.folderId))) {
+                    documentStore.delete(doc.id);
+                }
+            });
+        }
+
+        const folderRequest = folderStore.getAll();
+        const documentRequest = documentStore.getAll();
+
+        folderRequest.onsuccess = () => {
+            folders = folderRequest.result;
+            processDeletion();
+        };
+
+        documentRequest.onsuccess = () => {
+            documents = documentRequest.result;
+            processDeletion();
+        };
+
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+    });
+}
+
+
+// Get Folder Details
+function getFolderById(folderId) {
+    return new Promise((resolve, reject) => {
+
+        const transaction = database.transaction(
+            "folders",
+            "readonly"
+        );
+
+        const store = transaction.objectStore("folders");
+
+        const request = store.get(Number(folderId));
+
+        request.onsuccess = () => {
+            resolve(request.result || null);
+        };
+
+        request.onerror = () => {
+            reject(request.error);
+        };
+    });
+}
