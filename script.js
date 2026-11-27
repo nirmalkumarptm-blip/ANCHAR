@@ -383,23 +383,8 @@ document.addEventListener("click", (event) => {
 
 });
 
-cameraInput.addEventListener("change", () => {
 
-    const image = cameraInput.files[0];
-
-    if (!image) return;
-
-    alert(
-        "Camera image selected successfully!\n" +
-        "File: " + image.name
-    );
-
-    cameraInput.value = "";
-
-});
-
-
-/* ANCHAR - IMAGE TO PDF CONVERSION */
+/* ANCHAR - CAMERA IMAGE TO PDF */
 
 cameraInput.addEventListener("change", async () => {
 
@@ -407,11 +392,13 @@ cameraInput.addEventListener("change", async () => {
 
     if (!image) return;
 
+    let imageURL;
+
     try {
 
-        const imageURL = URL.createObjectURL(image);
-        const imageElement = new Image();
+        imageURL = URL.createObjectURL(image);
 
+        const imageElement = new Image();
         imageElement.src = imageURL;
 
         await new Promise((resolve, reject) => {
@@ -419,47 +406,60 @@ cameraInput.addEventListener("change", async () => {
             imageElement.onerror = reject;
         });
 
+        const canvas = document.createElement("canvas");
+
+        canvas.width = imageElement.naturalWidth;
+        canvas.height = imageElement.naturalHeight;
+
+        const context = canvas.getContext("2d");
+
+        context.drawImage(
+            imageElement,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        const imageData = canvas.toDataURL("image/jpeg", 0.95);
+
         const { jsPDF } = window.jspdf;
 
         const pdf = new jsPDF({
-            orientation: imageElement.width > imageElement.height
+            orientation: canvas.width > canvas.height
                 ? "landscape"
                 : "portrait",
             unit: "px",
-            format: [
-                imageElement.width,
-                imageElement.height
-            ]
+            format: [canvas.width, canvas.height]
         });
 
         pdf.addImage(
-            imageElement,
+            imageData,
             "JPEG",
             0,
             0,
-            imageElement.width,
-            imageElement.height
+            canvas.width,
+            canvas.height
         );
 
-        const documentName = prompt(
-            "Enter document name:"
-        );
+        const documentName = prompt("Enter document name:");
 
         if (documentName && documentName.trim()) {
             pdf.save(documentName.trim() + ".pdf");
-            alert("Document converted to PDF successfully!");
+            alert("PDF created successfully!");
         }
-
-        URL.revokeObjectURL(imageURL);
 
     } catch (error) {
 
         alert("PDF conversion failed. Please try again.");
-
         console.error(error);
 
-    }
+    } finally {
 
-    cameraInput.value = "";
+        if (imageURL) URL.revokeObjectURL(imageURL);
+
+        cameraInput.value = "";
+
+    }
 
 });
