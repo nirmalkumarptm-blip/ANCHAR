@@ -328,6 +328,9 @@ document.addEventListener("click", (event) => {
 
 });
 
+
+/* CUSTOM DOCUMENT NAME */
+
 pdfInput.addEventListener("change", () => {
 
     const file = pdfInput.files[0];
@@ -339,6 +342,23 @@ pdfInput.addEventListener("change", () => {
         return;
     }
 
-    alert("PDF selected: " + file.name);
+    const customName = prompt(
+        "Enter your document name:",
+        file.name.replace(/\.pdf$/i, "")
+    );
+
+    if (customName === null || !customName.trim()) {
+        alert("Document name is required.");
+        pdfInput.value = "";
+        return;
+    }
+
+    alert(
+        "Document selected successfully!\n" +
+        "Name: " + customName.trim() +
+        "\nFile: " + file.name
+    );
+
+    pdfInput.value = "";
 
 });
