@@ -362,3 +362,38 @@ pdfInput.addEventListener("change", () => {
     pdfInput.value = "";
 
 });
+
+
+/* ANCHAR - CAMERA SCAN */
+
+const cameraInput = document.createElement("input");
+
+cameraInput.type = "file";
+cameraInput.accept = "image/*";
+cameraInput.setAttribute("capture", "environment");
+cameraInput.style.display = "none";
+
+document.body.appendChild(cameraInput);
+
+document.addEventListener("click", (event) => {
+
+    if (event.target.closest("#scan-camera")) {
+        cameraInput.click();
+    }
+
+});
+
+cameraInput.addEventListener("change", () => {
+
+    const image = cameraInput.files[0];
+
+    if (!image) return;
+
+    alert(
+        "Camera image selected successfully!\n" +
+        "File: " + image.name
+    );
+
+    cameraInput.value = "";
+
+});
