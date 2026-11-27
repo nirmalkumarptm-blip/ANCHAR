@@ -63,13 +63,16 @@ function showPinScreen() {
 
 }
 
-// PIN entry display
+
+/* =================================
+   ANCHAR - DASHBOARD
+================================= */
+
 let enteredPin = "";
 
 document.addEventListener("click", (event) => {
 
     const key = event.target.closest(".pin-key");
-
     if (!key) return;
 
     const value = key.dataset.key;
@@ -81,10 +84,85 @@ document.addEventListener("click", (event) => {
     }
 
     document.querySelectorAll(".dot").forEach((dot, index) => {
-        dot.classList.toggle(
-            "active",
-            index < enteredPin.length
-        );
+        dot.classList.toggle("active", index < enteredPin.length);
     });
 
+    // Temporary dashboard preview only.
+    // Real PIN verification will be implemented later.
+    if (enteredPin.length === 4) {
+        setTimeout(() => {
+            showDashboard();
+            enteredPin = "";
+        }, 300);
+    }
+
 });
+
+function showDashboard() {
+
+    const app = document.getElementById("app");
+
+    const today = new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+    });
+
+    app.innerHTML = `
+        <main class="dashboard">
+
+            <header class="dashboard-header">
+                <div class="brand">
+                    <span class="brand-shield">AN</span>
+                    <h1>ANCHAR</h1>
+                </div>
+
+                <div class="header-actions">
+                    <span class="today-date">${today}</span>
+                    <button class="settings-btn">⚙</button>
+                </div>
+            </header>
+
+            <section class="profile-section">
+                <p class="section-label">PERSONAL VAULT</p>
+
+                <div class="profile-card">
+                    <div class="profile-shield">AN</div>
+
+                    <h2>NIRMAL</h2>
+
+                    <div class="document-count">
+                        <span>0</span>
+                        <small>TOTAL DOCUMENTS</small>
+                    </div>
+
+                    <p class="profile-status">MAIN ADMIN</p>
+                </div>
+            </section>
+
+            <section class="categories-section">
+                <h2>Document Categories</h2>
+                <p>Select a category to manage documents</p>
+
+                <div class="category-grid">
+                    ${[
+                        "Aadhaar",
+                        "PAN Card",
+                        "Bank",
+                        "Certificates",
+                        "Insurance",
+                        "Driving Licence"
+                    ].map((name, index) => `
+                        <button class="category-card">
+                            <span class="category-number">
+                                ${String(index + 1).padStart(2, "0")}
+                            </span>
+                            <span>${name}</span>
+                        </button>
+                    `).join("")}
+                </div>
+            </section>
+
+        </main>
+    `;
+}
