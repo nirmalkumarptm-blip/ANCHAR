@@ -235,13 +235,19 @@ function showDocuments(category) {
 
                 <p>Your ${category} documents</p>
 
-                <div class="empty-documents">
-                    <div class="empty-icon">◇</div>
-                    <h3>No Documents Yet</h3>
-                    <p>Your documents will appear here.</p>
-                </div>
+               
+<div class="document-actions">
+    <button class="add-document-btn" id="add-document">
+        + Add Document
+    </button>
+</div>
 
-            </section>
+<div class="empty-documents">
+    <div class="empty-icon">◇</div>
+    <h3>No Documents Yet</h3>
+    <p>Your documents will appear here.</p>
+</div>
+
 
         </main>
     `;
