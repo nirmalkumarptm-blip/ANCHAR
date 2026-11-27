@@ -1,0 +1,9 @@
+
+{
+  "appId": "com.anchar.vault",
+  "appName": "ANCHAR",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}
