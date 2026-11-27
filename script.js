@@ -267,3 +267,44 @@ document.addEventListener("click", (event) => {
 
 });
 
+
+/* ADD DOCUMENT POPUP */
+
+document.addEventListener("click", (event) => {
+
+    if (event.target.closest("#add-document")) {
+
+        const popup = document.createElement("div");
+
+        popup.className = "upload-popup";
+
+        popup.innerHTML = `
+            <div class="upload-box">
+
+                <h2>Add Document</h2>
+                <p>Choose your upload method</p>
+
+                <button id="choose-pdf">
+                    Select PDF File
+                </button>
+
+                <button id="scan-camera">
+                    Scan with Camera
+                </button>
+
+                <button id="close-upload">
+                    Cancel
+                </button>
+
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+
+    }
+
+    if (event.target.closest("#close-upload")) {
+        document.querySelector(".upload-popup")?.remove();
+    }
+
+});
