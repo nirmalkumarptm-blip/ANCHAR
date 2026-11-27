@@ -490,3 +490,52 @@ body {
 .add-document-btn:hover {
     background: var(--gold-light);
 }
+
+
+/* UPLOAD POPUP */
+
+.upload-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: #000000cc;
+}
+
+.upload-box {
+    width: 100%;
+    max-width: 380px;
+    padding: 30px 22px;
+    border: 1px solid var(--gold);
+    border-radius: 20px;
+    background: #171512;
+    text-align: center;
+}
+
+.upload-box h2 {
+    color: var(--gold-light);
+}
+
+.upload-box p {
+    margin: 12px 0 25px;
+    color: var(--muted);
+}
+
+.upload-box button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 12px;
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    background: #211d14;
+    color: var(--gold-light);
+    cursor: pointer;
+}
+
+.upload-box button:last-child {
+    border-color: #555;
+    color: var(--white);
+}
