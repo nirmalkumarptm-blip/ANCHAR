@@ -176,7 +176,7 @@ function showCategories() {
 
                 <div class="category-grid">
                     ${categories.map((name, index) => `
-                        <button class="category-card">
+                        <button class="category-card" data-category="${name}">
                             <span class="category-number">
                                 ${String(index + 1).padStart(2, "0")}
                             </span>
@@ -201,3 +201,63 @@ document.addEventListener("click", (event) => {
     }
 
 });
+
+
+/* =================================
+   ANCHAR - DOCUMENT LIST
+================================= */
+
+function showDocuments(category) {
+
+    const app = document.getElementById("app");
+
+    app.innerHTML = `
+        <main class="dashboard">
+
+            <header class="dashboard-header">
+
+                <div class="brand">
+                    <span class="brand-shield">AN</span>
+                    <h1>ANCHAR</h1>
+                </div>
+
+                <button class="settings-btn" id="back-categories">
+                    ←
+                </button>
+
+            </header>
+
+            <section class="categories-section">
+
+                <p class="section-label">NIRMAL'S VAULT</p>
+
+                <h2>${category}</h2>
+
+                <p>Your ${category} documents</p>
+
+                <div class="empty-documents">
+                    <div class="empty-icon">◇</div>
+                    <h3>No Documents Yet</h3>
+                    <p>Your documents will appear here.</p>
+                </div>
+
+            </section>
+
+        </main>
+    `;
+}
+
+document.addEventListener("click", (event) => {
+
+    const categoryCard = event.target.closest("[data-category]");
+
+    if (categoryCard) {
+        showDocuments(categoryCard.dataset.category);
+    }
+
+    if (event.target.closest("#back-categories")) {
+        showCategories();
+    }
+
+});
+
