@@ -397,3 +397,69 @@ cameraInput.addEventListener("change", () => {
     cameraInput.value = "";
 
 });
+
+
+/* ANCHAR - IMAGE TO PDF CONVERSION */
+
+cameraInput.addEventListener("change", async () => {
+
+    const image = cameraInput.files[0];
+
+    if (!image) return;
+
+    try {
+
+        const imageURL = URL.createObjectURL(image);
+        const imageElement = new Image();
+
+        imageElement.src = imageURL;
+
+        await new Promise((resolve, reject) => {
+            imageElement.onload = resolve;
+            imageElement.onerror = reject;
+        });
+
+        const { jsPDF } = window.jspdf;
+
+        const pdf = new jsPDF({
+            orientation: imageElement.width > imageElement.height
+                ? "landscape"
+                : "portrait",
+            unit: "px",
+            format: [
+                imageElement.width,
+                imageElement.height
+            ]
+        });
+
+        pdf.addImage(
+            imageElement,
+            "JPEG",
+            0,
+            0,
+            imageElement.width,
+            imageElement.height
+        );
+
+        const documentName = prompt(
+            "Enter document name:"
+        );
+
+        if (documentName && documentName.trim()) {
+            pdf.save(documentName.trim() + ".pdf");
+            alert("Document converted to PDF successfully!");
+        }
+
+        URL.revokeObjectURL(imageURL);
+
+    } catch (error) {
+
+        alert("PDF conversion failed. Please try again.");
+
+        console.error(error);
+
+    }
+
+    cameraInput.value = "";
+
+});
