@@ -203,3 +203,233 @@ body {
         height: 55px;
     }
 }
+
+
+/* =================================
+   ANCHAR - DASHBOARD DESIGN
+================================= */
+
+.dashboard {
+    min-height: 100vh;
+    padding: 25px;
+    background: var(--black);
+}
+
+/* HEADER */
+
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid #806a3e55;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-shield {
+    width: 38px;
+    height: 43px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--gold);
+    border-radius: 45% 45% 40% 40%;
+    color: var(--gold-light);
+    font-size: 14px;
+}
+
+.brand h1 {
+    color: var(--gold-light);
+    font-size: 21px;
+    letter-spacing: 4px;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.today-date {
+    color: var(--muted);
+    font: 12px Arial, sans-serif;
+}
+
+.settings-btn {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--gold);
+    border-radius: 50%;
+    background: var(--card);
+    color: var(--gold-light);
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* PROFILE */
+
+.profile-section {
+    max-width: 700px;
+    margin: 45px auto;
+    text-align: center;
+}
+
+.section-label {
+    color: var(--gold);
+    font: 11px Arial, sans-serif;
+    letter-spacing: 4px;
+    margin-bottom: 20px;
+}
+
+.profile-card {
+    max-width: 360px;
+    margin: auto;
+    padding: 35px 20px;
+    border: 1px solid var(--gold);
+    border-radius: 25px;
+    background: linear-gradient(145deg, #211d14, #100f0c);
+    box-shadow: 0 12px 35px #000;
+}
+
+.profile-shield {
+    width: 95px;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    border: 2px solid var(--gold);
+    border-radius: 48% 48% 42% 42%;
+    color: var(--gold-light);
+    font-size: 30px;
+    font-weight: bold;
+    box-shadow: 0 0 25px #c6a45c30;
+}
+
+.profile-card h2 {
+    margin-top: 22px;
+    color: var(--gold-light);
+    font-size: 25px;
+    letter-spacing: 6px;
+}
+
+.document-count {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 20px;
+}
+
+.document-count span {
+    color: var(--gold-light);
+    font-size: 32px;
+}
+
+.document-count small {
+    color: var(--muted);
+    font: 10px Arial, sans-serif;
+    letter-spacing: 2px;
+}
+
+.profile-status {
+    margin-top: 20px;
+    color: var(--gold);
+    font: 10px Arial, sans-serif;
+    letter-spacing: 3px;
+}
+
+/* CATEGORIES */
+
+.categories-section {
+    max-width: 850px;
+    margin: 55px auto 20px;
+}
+
+.categories-section h2 {
+    color: var(--gold-light);
+    font-size: 23px;
+}
+
+.categories-section > p {
+    margin-top: 8px;
+    margin-bottom: 25px;
+    color: var(--muted);
+    font: 13px Arial, sans-serif;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.category-card {
+    min-height: 125px;
+    padding: 20px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    border: 1px solid #806a3e;
+    border-radius: 17px;
+    background: var(--card);
+    color: var(--gold-light);
+    font-family: Georgia, serif;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.25s;
+}
+
+.category-card:hover {
+    background: #292216;
+    border-color: var(--gold-light);
+    transform: translateY(-4px);
+}
+
+.category-number {
+    color: var(--gold);
+    font: 11px Arial, sans-serif;
+    letter-spacing: 2px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 600px) {
+    .dashboard {
+        padding: 18px 14px;
+    }
+
+    .brand h1 {
+        font-size: 17px;
+        letter-spacing: 3px;
+    }
+
+    .today-date {
+        font-size: 10px;
+    }
+
+    .header-actions {
+        gap: 8px;
+    }
+
+    .category-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .category-card {
+        min-height: 115px;
+        font-size: 13px;
+    }
+
+    .profile-section {
+        margin-top: 35px;
+    }
+}
