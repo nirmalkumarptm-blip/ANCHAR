@@ -433,3 +433,36 @@ body {
         margin-top: 35px;
     }
 }
+
+
+/* DOCUMENT EMPTY STATE */
+
+.empty-documents {
+    min-height: 230px;
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px dashed #806a3e;
+    border-radius: 18px;
+    background: #171512;
+    text-align: center;
+}
+
+.empty-icon {
+    color: var(--gold);
+    font-size: 45px;
+    margin-bottom: 15px;
+}
+
+.empty-documents h3 {
+    color: var(--gold-light);
+    font-size: 19px;
+}
+
+.empty-documents p {
+    color: var(--muted);
+    margin-top: 10px;
+    font: 13px Arial, sans-serif;
+}
