@@ -55,7 +55,8 @@ function openDatabase() {
 
 }
 
-function saveDocument(file, name, category) {
+
+function saveDocument(file, name, category, tags = []) {
 
     return new Promise((resolve, reject) => {
 
@@ -70,6 +71,7 @@ function saveDocument(file, name, category) {
             name: name,
             category: category,
             file: file,
+            tags: tags,
             createdAt: new Date().toISOString()
         });
 
@@ -79,6 +81,7 @@ function saveDocument(file, name, category) {
     });
 
 }
+
 
 function getDocuments(category = null) {
 
@@ -375,6 +378,12 @@ async function showDocuments(category) {
 
                             <p>PDF Document</p>
 
+                            <div class="document-tags">
+                            ${(doc.tags || []).map(tag => `
+                            <span class="document-tag">${escapeHTML(tag)}</span>
+                            `).join("")}
+                            </div>
+
                             <button data-view="${doc.id}">
                                 View
                             </button>
@@ -480,6 +489,7 @@ function showUploadPopup() {
    SAVE PDF
 ================================= */
 
+
 async function askDocumentName(file, category) {
 
     const customName = prompt(
@@ -492,12 +502,37 @@ async function askDocumentName(file, category) {
         return;
     }
 
+    const selectedTags = prompt(
+        "Enter tags separated by commas:\n\nImportant, Urgent, Personal",
+        ""
+    );
+
+    if (selectedTags === null) return;
+
+    const allowedTags = ["Important", "Urgent", "Personal"];
+
+    const tags = [...new Set(
+        selectedTags.split(",")
+            .map(tag => tag.trim())
+            .filter(tag =>
+                allowedTags.some(
+                    allowed => allowed.toLowerCase() === tag.toLowerCase()
+                )
+            )
+            .map(tag =>
+                allowedTags.find(
+                    allowed => allowed.toLowerCase() === tag.toLowerCase()
+                )
+            )
+    )];
+
     try {
 
         await saveDocument(
             file,
             customName.trim(),
-            category
+            category,
+            tags
         );
 
         alert("Document saved successfully in ANCHAR!");
@@ -508,12 +543,13 @@ async function askDocumentName(file, category) {
 
     } catch (error) {
 
-        alert("Document could not be saved. Please try again.");
+        alert("Document could not be saved.");
         console.error(error);
 
     }
 
 }
+
 
 /* =================================
    PDF FILE SELECTION
