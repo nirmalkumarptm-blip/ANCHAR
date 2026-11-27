@@ -113,6 +113,29 @@ function getDocuments(category = null) {
 
 }
 
+
+/* DELETE DOCUMENT FROM LOCAL DATABASE */
+
+function deleteDocument(id) {
+
+    return new Promise((resolve, reject) => {
+
+        const transaction = database.transaction(
+            "documents",
+            "readwrite"
+        );
+
+        const store = transaction.objectStore("documents");
+
+        store.delete(Number(id));
+
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error);
+
+    });
+
+}
+
 /* =================================
    START APP
 ================================= */
@@ -358,6 +381,10 @@ async function showDocuments(category) {
 
                             <button data-download="${doc.id}">
                                 Download
+                            </button>
+
+                            <button data-delete="${doc.id}">
+                                Delete
                             </button>
 
                         </div>
@@ -755,5 +782,35 @@ document.addEventListener("click", async (event) => {
         await openDocument(downloadButton.dataset.download, true);
         return;
     }
+
+    
+const deleteButton = target.closest("[data-delete]");
+
+if (deleteButton) {
+
+    const confirmed = confirm(
+        "Are you sure you want to permanently delete this document?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+
+        await deleteDocument(deleteButton.dataset.delete);
+
+        alert("Document deleted successfully!");
+
+        await showDocuments(activeCategory);
+
+    } catch (error) {
+
+        alert("Unable to delete document.");
+        console.error(error);
+
+    }
+
+    return;
+
+}
 
 });
