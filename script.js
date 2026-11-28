@@ -15,6 +15,8 @@ const SPLASH_DURATION = 2000;
 let enteredPin = "";
 let activeCategory = "";
 let activeFolderId = null;
+let activeVaultId = null;
+let activeVaultName = "";
 let database = null;
 let pinSetupMode = false;
 let firstPin = "";
@@ -55,26 +57,85 @@ async function hashPIN(pin, salt) {
         .join("");
 }
 
+
+async function getVault(vaultId) {
+
+    return new Promise((resolve, reject) => {
+
+        const transaction = database.transaction(
+            "vaults",
+            "readonly"
+        );
+
+        const request = transaction
+            .objectStore("vaults")
+            .get(vaultId);
+
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+
+    });
+
+}
+
+
 async function savePIN(pin) {
 
-    const salt = crypto.randomUUID();
+    const vault = await getVault(activeVaultId);
 
+    if (!vault) {
+        throw new Error("Vault not found.");
+    }
+
+    const salt = crypto.randomUUID();
     const hash = await hashPIN(pin, salt);
 
-    localStorage.setItem(PIN_SALT_KEY, salt);
-    localStorage.setItem(PIN_HASH_KEY, hash);
+    return new Promise((resolve, reject) => {
+
+        const transaction = database.transaction(
+            "vaults",
+            "readwrite"
+        );
+
+        const store = transaction.objectStore("vaults");
+
+        store.put({
+            ...vault,
+            pinSalt: salt,
+            pinHash: hash
+        });
+
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error);
+
+    });
+
 }
+
 
 async function verifyPIN(pin) {
 
-    const savedHash = localStorage.getItem(PIN_HASH_KEY);
-    const salt = localStorage.getItem(PIN_SALT_KEY);
+    const vault = await getVault(activeVaultId);
+
+    if (!vault) return false;
+
+    // Existing NIRMAL PIN compatibility
+    const savedHash = vault.pinHash ||
+        (activeVaultId === "nirmal"
+            ? localStorage.getItem(PIN_HASH_KEY)
+            : null);
+
+    const salt = vault.pinSalt ||
+        (activeVaultId === "nirmal"
+            ? localStorage.getItem(PIN_SALT_KEY)
+            : null);
 
     if (!savedHash || !salt) return false;
 
     const enteredHash = await hashPIN(pin, salt);
 
     return enteredHash === savedHash;
+
 }
 
 
@@ -92,6 +153,7 @@ const categories = [
 ================================= */
 
 
+
 function openDatabase() {
 
     return new Promise((resolve, reject) => {
@@ -101,10 +163,9 @@ function openDatabase() {
         request.onupgradeneeded = (event) => {
 
             const db = event.target.result;
-            const oldVersion = event.oldVersion;
             const transaction = event.target.transaction;
+            const oldVersion = event.oldVersion;
 
-            // Documents store
             if (!db.objectStoreNames.contains("documents")) {
                 db.createObjectStore("documents", {
                     keyPath: "id",
@@ -112,7 +173,6 @@ function openDatabase() {
                 });
             }
 
-            // Folders store
             if (!db.objectStoreNames.contains("folders")) {
                 db.createObjectStore("folders", {
                     keyPath: "id",
@@ -120,57 +180,60 @@ function openDatabase() {
                 });
             }
 
-            // Vaults store
             if (!db.objectStoreNames.contains("vaults")) {
                 db.createObjectStore("vaults", {
                     keyPath: "id"
                 });
             }
 
-            // Preserve existing NIRMAL vault
-            if (oldVersion < 3) {
+            const vaultStore = transaction.objectStore("vaults");
 
-                transaction.objectStore("vaults").put({
-                    id: "nirmal",
-                    name: "NIRMAL",
+            const vaults = [
+                { id: "nirmal", name: "NIRMAL" },
+                { id: "mathan", name: "MATHAN" },
+                { id: "ananthi", name: "ANANTHI" },
+                { id: "chandrasekaran", name: "CHANDRASEKARAN" }
+            ];
+
+            vaults.forEach(vault => {
+                vaultStore.put({
+                    ...vault,
                     createdAt: new Date().toISOString()
                 });
+            });
 
-                // Assign existing documents to NIRMAL
+            // Preserve existing NIRMAL documents and folders
+            if (oldVersion < 3) {
+
                 const documentStore =
                     transaction.objectStore("documents");
 
                 const documentRequest = documentStore.openCursor();
 
                 documentRequest.onsuccess = (event) => {
-
                     const cursor = event.target.result;
 
                     if (cursor) {
+                        const doc = cursor.value;
 
-                        const document = cursor.value;
-
-                        if (!document.vaultId) {
-                            document.vaultId = "nirmal";
-                            cursor.update(document);
+                        if (!doc.vaultId) {
+                            doc.vaultId = "nirmal";
+                            cursor.update(doc);
                         }
 
                         cursor.continue();
                     }
                 };
 
-                // Assign existing folders to NIRMAL
                 const folderStore =
                     transaction.objectStore("folders");
 
                 const folderRequest = folderStore.openCursor();
 
                 folderRequest.onsuccess = (event) => {
-
                     const cursor = event.target.result;
 
                     if (cursor) {
-
                         const folder = cursor.value;
 
                         if (!folder.vaultId) {
@@ -200,6 +263,8 @@ function openDatabase() {
 
 
 
+
+
 function saveDocument(file, name, category, tags = [], folderId = null) {
 
     return new Promise((resolve, reject) => {
@@ -217,6 +282,7 @@ function saveDocument(file, name, category, tags = [], folderId = null) {
             file: file,
             tags: tags,
             folderId: folderId,
+            vaultId: activeVaultId || "nirmal",
             createdAt: new Date().toISOString()
         });
 
@@ -243,7 +309,11 @@ function getDocuments(category = null) {
 
         request.onsuccess = () => {
 
-            let documents = request.result;
+            const currentVault = activeVaultId || "nirmal";
+
+            let documents = request.result.filter(
+                doc => (doc.vaultId || "nirmal") === currentVault
+            );
 
             if (category) {
                 documents = documents.filter(
@@ -262,23 +332,36 @@ function getDocuments(category = null) {
 }
 
 
-/* DELETE DOCUMENT FROM LOCAL DATABASE */
+/* DELETE DOCUMENT FROM CURRENT VAULT */
 
 function deleteDocument(id) {
 
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
 
-        const transaction = database.transaction(
-            "documents",
-            "readwrite"
-        );
+        try {
 
-        const store = transaction.objectStore("documents");
+            const doc = await getDocumentById(id);
 
-        store.delete(Number(id));
+            if (!doc) {
+                reject(new Error("Document not found in this vault."));
+                return;
+            }
 
-        transaction.oncomplete = () => resolve(true);
-        transaction.onerror = () => reject(transaction.error);
+            const transaction = database.transaction(
+                "documents",
+                "readwrite"
+            );
+
+            transaction.objectStore("documents").delete(Number(id));
+
+            transaction.oncomplete = () => resolve(true);
+            transaction.onerror = () => reject(transaction.error);
+
+        } catch (error) {
+
+            reject(error);
+
+        }
 
     });
 
@@ -303,26 +386,84 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
    
+
 setTimeout(() => {
-
-    const savedPIN = localStorage.getItem(PIN_HASH_KEY);
-    const savedSalt = localStorage.getItem(PIN_SALT_KEY);
-
-    if (savedPIN && savedSalt) {
-        pinSetupMode = false;
-        showPinScreen();
-    } else {
-        pinSetupMode = true;
-        showPinSetupScreen();
-    }
-
+    showVaultSelector();
 }, SPLASH_DURATION);
+
 
 });
 
 /* =================================
    PIN SCREEN
 ================================= */
+
+async function showVaultSelector() {
+
+    const app = document.getElementById("app");
+
+    try {
+
+        const transaction = database.transaction(
+            "vaults",
+            "readonly"
+        );
+
+        const request = transaction
+            .objectStore("vaults")
+            .getAll();
+
+        request.onsuccess = () => {
+
+            const vaults = request.result;
+
+            app.innerHTML = `
+                <main class="pin-screen vault-selector">
+
+                    <div class="pin-logo">AN</div>
+
+                    <h1>ANCHAR</h1>
+
+                    <p class="pin-subtitle">
+                        SELECT YOUR PERSONAL VAULT
+                    </p>
+
+                    <div class="vault-list">
+
+                        ${vaults.map(vault => `
+                            <button
+                                class="vault-card"
+                                data-vault="${vault.id}">
+
+                                <span class="vault-card-shield">AN</span>
+
+                                <span>${escapeHTML(vault.name)}</span>
+
+                                <small>OPEN VAULT</small>
+
+                            </button>
+                        `).join("")}
+
+                    </div>
+
+                </main>
+            `;
+
+        };
+
+        request.onerror = () => {
+            alert("Unable to load vaults.");
+        };
+
+    } catch (error) {
+
+        console.error(error);
+        alert("Unable to open vault selection.");
+
+    }
+
+}
+
 
 function showPinScreen() {
 
@@ -494,10 +635,13 @@ async function showDashboard() {
                     <h1>ANCHAR</h1>
                 </div>
 
-                <div class="header-actions">
-                    <span class="today-date">${today}</span>
-                    <button class="settings-btn">⚙</button>
-                </div>
+               <div class="header-actions">
+    <span class="today-date">${today}</span>
+    <button class="switch-vault-btn" id="switch-vault">
+        Switch Vault
+    </button>
+    <button class="settings-btn">⚙</button>
+</div>
 
             </header>
 
@@ -509,7 +653,7 @@ async function showDashboard() {
 
                     <div class="profile-shield">AN</div>
 
-                    <h2>NIRMAL</h2>
+                    <h2>${escapeHTML(activeVaultName || "NIRMAL")}</h2>
 
                     <div class="document-count">
                         <span>${documents.length}</span>
@@ -555,7 +699,7 @@ function showCategories() {
 
             <section class="categories-section">
 
-                <h2>NIRMAL'S DOCUMENTS</h2>
+                <h2>${escapeHTML(activeVaultName || "NIRMAL")}'S DOCUMENTS</h2>
 
                 <p>Select a document category</p>
 
@@ -623,8 +767,7 @@ const folders = await getFolders(category, activeFolderId);
 
             <section class="categories-section">
 
-                <p class="section-label">NIRMAL'S VAULT</p>
-
+                <p class="section-label">${escapeHTML(activeVaultName || "NIRMAL")}'S VAULT</p>
                 <h2>${escapeHTML(category)}</h2>
 
                 ${currentFolder ? `
@@ -1100,6 +1243,55 @@ document.addEventListener("click", async (event) => {
 
     const target = event.target;
 
+   
+    // VAULT SELECTION ACTION
+
+    const selectedVault = target.closest("[data-vault]");
+
+    if (selectedVault) {
+
+        activeVaultId = selectedVault.dataset.vault;
+
+        try {
+
+            const vault = await getVault(activeVaultId);
+
+            if (!vault) {
+                alert("Vault not found.");
+                return;
+            }
+
+            activeVaultName = vault.name;
+
+            activeCategory = "";
+            activeFolderId = null;
+            enteredPin = "";
+            firstPin = "";
+
+            const hasPIN = vault.pinHash ||
+                (activeVaultId === "nirmal" &&
+                 localStorage.getItem(PIN_HASH_KEY) &&
+                 localStorage.getItem(PIN_SALT_KEY));
+
+            pinSetupMode = !hasPIN;
+
+            if (pinSetupMode) {
+                showPinSetupScreen();
+            } else {
+                showPinScreen();
+            }
+
+        } catch (error) {
+
+            console.error(error);
+            alert("Unable to open selected vault.");
+
+        }
+
+        return;
+    }
+
+
     const pinKey = target.closest(".pin-key");
 
     if (pinKey) {
@@ -1181,6 +1373,24 @@ if (enteredPin.length === 4) {
 
     }
 
+
+    // SWITCH VAULT
+
+    if (target.closest("#switch-vault")) {
+
+        activeVaultId = null;
+        activeVaultName = "";
+        activeCategory = "";
+        activeFolderId = null;
+        enteredPin = "";
+        firstPin = "";
+        pinSetupMode = false;
+
+        showVaultSelector();
+        return;
+    }
+
+   
     if (target.closest("#open-profile")) {
         showCategories();
         return;
@@ -1421,72 +1631,108 @@ if (target.closest("#back-folder")) {
 // ANCHAR - FOLDER MANAGEMENT
 // =================================
 
+
 function createFolder(name, category, parentId = null) {
+
     return new Promise((resolve, reject) => {
-        const transaction = database.transaction("folders", "readwrite");
+
+        const transaction = database.transaction(
+            "folders",
+            "readwrite"
+        );
+
         const store = transaction.objectStore("folders");
 
         const request = store.add({
             name: name,
             category: category,
             parentId: parentId,
+            vaultId: activeVaultId || "nirmal",
             createdAt: new Date().toISOString()
         });
 
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
+
     });
+
 }
 
+
 function getFolders(category, parentId = null) {
+
     return new Promise((resolve, reject) => {
-        const transaction = database.transaction("folders", "readonly");
+
+        const transaction = database.transaction(
+            "folders",
+            "readonly"
+        );
+
         const store = transaction.objectStore("folders");
+
         const request = store.getAll();
 
         request.onsuccess = () => {
+
+            const currentVault = activeVaultId || "nirmal";
+
             const folders = request.result.filter(folder =>
+                (folder.vaultId || "nirmal") === currentVault &&
                 folder.category === category &&
                 folder.parentId === parentId
             );
 
             resolve(folders);
+
         };
 
         request.onerror = () => reject(request.error);
+
     });
+
 }
 
 // Rename Folder
+
 function renameFolder(folderId, newName) {
+
     return new Promise((resolve, reject) => {
-        const transaction = database.transaction("folders", "readwrite");
+
+        const transaction = database.transaction(
+            "folders",
+            "readwrite"
+        );
+
         const store = transaction.objectStore("folders");
         const request = store.get(Number(folderId));
 
         request.onsuccess = () => {
-            const folder = request.result;
 
-            if (!folder) {
-                reject("Folder not found");
+            const folder = request.result;
+            const currentVault = activeVaultId || "nirmal";
+
+            if (!folder || (folder.vaultId || "nirmal") !== currentVault) {
+                reject(new Error("Folder not found in this vault."));
                 return;
             }
 
             folder.name = newName;
 
-            const updateRequest = store.put(folder);
-
-            updateRequest.onsuccess = () => resolve(true);
-            updateRequest.onerror = () => reject(updateRequest.error);
+            store.put(folder);
         };
 
-        request.onerror = () => reject(request.error);
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error);
+
     });
+
 }
 
-// Delete Folder
+
+// DELETE FOLDER AND ITS CONTENTS FROM CURRENT VAULT
 
 function deleteFolder(folderId) {
+
     return new Promise((resolve, reject) => {
 
         const transaction = database.transaction(
@@ -1497,65 +1743,85 @@ function deleteFolder(folderId) {
         const folderStore = transaction.objectStore("folders");
         const documentStore = transaction.objectStore("documents");
 
+        const currentVault = activeVaultId || "nirmal";
+
         let folders;
         let documents;
-        let processed = false;
 
         function processDeletion() {
-            if (!folders || !documents || processed) return;
 
-            processed = true;
+            if (!folders || !documents) return;
 
             const folderIds = new Set([Number(folderId)]);
 
             let changed = true;
 
             while (changed) {
+
                 changed = false;
 
                 folders.forEach(folder => {
+
                     if (
-                        folder.parentId !== null &&
                         folderIds.has(Number(folder.parentId)) &&
                         !folderIds.has(Number(folder.id))
                     ) {
                         folderIds.add(Number(folder.id));
                         changed = true;
                     }
+
                 });
+
             }
 
             folderIds.forEach(id => folderStore.delete(id));
 
             documents.forEach(doc => {
+
                 if (folderIds.has(Number(doc.folderId))) {
                     documentStore.delete(doc.id);
                 }
+
             });
+
         }
 
         const folderRequest = folderStore.getAll();
         const documentRequest = documentStore.getAll();
 
         folderRequest.onsuccess = () => {
-            folders = folderRequest.result;
+
+            folders = folderRequest.result.filter(
+                folder => (folder.vaultId || "nirmal") === currentVault
+            );
+
             processDeletion();
+
         };
 
         documentRequest.onsuccess = () => {
-            documents = documentRequest.result;
+
+            documents = documentRequest.result.filter(
+                doc => (doc.vaultId || "nirmal") === currentVault
+            );
+
             processDeletion();
+
         };
 
         transaction.oncomplete = () => resolve(true);
         transaction.onerror = () => reject(transaction.error);
         transaction.onabort = () => reject(transaction.error);
+
     });
+
 }
 
 
-// Get Folder Details
+// GET FOLDER DETAILS FROM CURRENT VAULT
+
 function getFolderById(folderId) {
+
     return new Promise((resolve, reject) => {
 
         const transaction = database.transaction(
@@ -1564,17 +1830,28 @@ function getFolderById(folderId) {
         );
 
         const store = transaction.objectStore("folders");
-
         const request = store.get(Number(folderId));
 
         request.onsuccess = () => {
-            resolve(request.result || null);
+
+            const folder = request.result;
+            const currentVault = activeVaultId || "nirmal";
+
+            if (
+                folder &&
+                (folder.vaultId || "nirmal") === currentVault
+            ) {
+                resolve(folder);
+            } else {
+                resolve(null);
+            }
+
         };
 
-        request.onerror = () => {
-            reject(request.error);
-        };
+        request.onerror = () => reject(request.error);
+
     });
+
 }
 
 
