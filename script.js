@@ -91,30 +91,96 @@ const categories = [
    INDEXED DB - LOCAL STORAGE
 ================================= */
 
+
 function openDatabase() {
 
     return new Promise((resolve, reject) => {
 
-        const request = indexedDB.open("ANCHAR_VAULT", 2);
+        const request = indexedDB.open("ANCHAR_VAULT", 3);
 
         request.onupgradeneeded = (event) => {
 
             const db = event.target.result;
+            const oldVersion = event.oldVersion;
+            const transaction = event.target.transaction;
 
+            // Documents store
             if (!db.objectStoreNames.contains("documents")) {
-
                 db.createObjectStore("documents", {
                     keyPath: "id",
                     autoIncrement: true
                 });
+            }
 
-               if (!db.objectStoreNames.contains("folders")) {
-               db.createObjectStore("folders", {
-               keyPath: "id",
-               autoIncrement: true
-    });
-}
+            // Folders store
+            if (!db.objectStoreNames.contains("folders")) {
+                db.createObjectStore("folders", {
+                    keyPath: "id",
+                    autoIncrement: true
+                });
+            }
 
+            // Vaults store
+            if (!db.objectStoreNames.contains("vaults")) {
+                db.createObjectStore("vaults", {
+                    keyPath: "id"
+                });
+            }
+
+            // Preserve existing NIRMAL vault
+            if (oldVersion < 3) {
+
+                transaction.objectStore("vaults").put({
+                    id: "nirmal",
+                    name: "NIRMAL",
+                    createdAt: new Date().toISOString()
+                });
+
+                // Assign existing documents to NIRMAL
+                const documentStore =
+                    transaction.objectStore("documents");
+
+                const documentRequest = documentStore.openCursor();
+
+                documentRequest.onsuccess = (event) => {
+
+                    const cursor = event.target.result;
+
+                    if (cursor) {
+
+                        const document = cursor.value;
+
+                        if (!document.vaultId) {
+                            document.vaultId = "nirmal";
+                            cursor.update(document);
+                        }
+
+                        cursor.continue();
+                    }
+                };
+
+                // Assign existing folders to NIRMAL
+                const folderStore =
+                    transaction.objectStore("folders");
+
+                const folderRequest = folderStore.openCursor();
+
+                folderRequest.onsuccess = (event) => {
+
+                    const cursor = event.target.result;
+
+                    if (cursor) {
+
+                        const folder = cursor.value;
+
+                        if (!folder.vaultId) {
+                            folder.vaultId = "nirmal";
+                            cursor.update(folder);
+                        }
+
+                        cursor.continue();
+                    }
+                };
             }
 
         };
@@ -124,11 +190,14 @@ function openDatabase() {
             resolve(database);
         };
 
-        request.onerror = () => reject(request.error);
+        request.onerror = () => {
+            reject(request.error);
+        };
 
     });
 
 }
+
 
 
 function saveDocument(file, name, category, tags = [], folderId = null) {
