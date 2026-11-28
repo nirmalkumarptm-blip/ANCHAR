@@ -79,6 +79,52 @@ async function getVault(vaultId) {
 }
 
 
+async function ensureVaultsExist() {
+
+    const requiredVaults = [
+        { id: "nirmal", name: "NIRMAL" },
+        { id: "mathan", name: "MATHAN" },
+        { id: "ananthi", name: "ANANTHI" },
+        { id: "chandrasekaran", name: "CHANDRASEKARAN" }
+    ];
+
+    return new Promise((resolve, reject) => {
+
+        const transaction = database.transaction(
+            "vaults",
+            "readwrite"
+        );
+
+        const store = transaction.objectStore("vaults");
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+
+            const existingIds = request.result.map(vault => vault.id);
+
+            requiredVaults.forEach(vault => {
+
+                if (!existingIds.includes(vault.id)) {
+                    store.add({
+                        ...vault,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+
+            });
+
+        };
+
+        transaction.oncomplete = () => resolve(true);
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+
+    });
+
+}
+
+
+
 async function savePIN(pin) {
 
     const vault = await getVault(activeVaultId);
@@ -376,6 +422,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
 
         await openDatabase();
+await ensureVaultsExist();
 
     } catch (error) {
 
@@ -415,7 +462,16 @@ async function showVaultSelector() {
 
         request.onsuccess = () => {
 
-            const vaults = request.result;
+            const vaultOrder = [
+    "nirmal",
+    "mathan",
+    "ananthi",
+    "chandrasekaran"
+];
+
+const vaults = request.result.sort(
+    (a, b) => vaultOrder.indexOf(a.id) - vaultOrder.indexOf(b.id)
+);
 
             app.innerHTML = `
                 <main class="pin-screen vault-selector">
@@ -477,7 +533,7 @@ function showPinScreen() {
             <h1>ANCHAR</h1>
 
             <p class="pin-subtitle">
-                PERSONAL DOCUMENT VAULT
+                ${escapeHTML(activeVaultName || "PERSONAL")} VAULT
             </p>
 
             <h2>Enter Your PIN</h2>
@@ -527,7 +583,7 @@ function showPinSetupScreen() {
             <h1>ANCHAR</h1>
 
             <p class="pin-subtitle">
-                PERSONAL DOCUMENT VAULT
+                ${escapeHTML(activeVaultName || "PERSONAL")} VAULT
             </p>
 
             <h2>Create Your PIN</h2>
@@ -576,7 +632,7 @@ function showConfirmPinScreen() {
             <h1>ANCHAR</h1>
 
             <p class="pin-subtitle">
-                PERSONAL DOCUMENT VAULT
+                ${escapeHTML(activeVaultName || "PERSONAL")} VAULT
             </p>
 
             <h2>Confirm Your PIN</h2>
@@ -660,8 +716,9 @@ async function showDashboard() {
                         <small>TOTAL DOCUMENTS</small>
                     </div>
 
-                    <p class="profile-status">MAIN ADMIN</p>
-
+                    <p class="profile-status">
+    ${activeVaultId === "nirmal" ? "MAIN ADMIN" : "PERSONAL VAULT"}
+</p>
                     <small class="open-hint">
                         TAP TO OPEN VAULT
                     </small>
@@ -1871,10 +1928,16 @@ if (Capacitor.isNativePlatform()) {
             return;
         }
 
-        // Don't exit from PIN screen
-        if (document.querySelector(".pin-screen")) {
-            return;
-        }
+       // Vault Selector -> Exit App
+if (document.querySelector(".vault-selector")) {
+    await App.exitApp();
+    return;
+}
+
+// PIN screens -> Stay on screen
+if (document.querySelector(".pin-screen")) {
+    return;
+}
 
         // Folder -> Parent Folder
         if (activeFolderId !== null) {
