@@ -16,6 +16,67 @@ let enteredPin = "";
 let activeCategory = "";
 let activeFolderId = null;
 let database = null;
+let pinSetupMode = false;
+let firstPin = "";
+
+
+/* =================================
+   ANCHAR - PIN SECURITY
+================================= */
+
+const PIN_HASH_KEY = "ANCHAR_PIN_HASH";
+const PIN_SALT_KEY = "ANCHAR_PIN_SALT";
+
+async function hashPIN(pin, salt) {
+
+    const encoder = new TextEncoder();
+
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(pin),
+        "PBKDF2",
+        false,
+        ["deriveBits"]
+    );
+
+    const hash = await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt: encoder.encode(salt),
+            iterations: 310000,
+            hash: "SHA-256"
+        },
+        keyMaterial,
+        256
+    );
+
+    return Array.from(new Uint8Array(hash))
+        .map(byte => byte.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+async function savePIN(pin) {
+
+    const salt = crypto.randomUUID();
+
+    const hash = await hashPIN(pin, salt);
+
+    localStorage.setItem(PIN_SALT_KEY, salt);
+    localStorage.setItem(PIN_HASH_KEY, hash);
+}
+
+async function verifyPIN(pin) {
+
+    const savedHash = localStorage.getItem(PIN_HASH_KEY);
+    const salt = localStorage.getItem(PIN_SALT_KEY);
+
+    if (!savedHash || !salt) return false;
+
+    const enteredHash = await hashPIN(pin, salt);
+
+    return enteredHash === savedHash;
+}
+
 
 const categories = [
     "Aadhaar",
@@ -172,9 +233,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     }
 
-    setTimeout(() => {
+   
+setTimeout(() => {
+
+    const savedPIN = localStorage.getItem(PIN_HASH_KEY);
+    const savedSalt = localStorage.getItem(PIN_SALT_KEY);
+
+    if (savedPIN && savedSalt) {
+        pinSetupMode = false;
         showPinScreen();
-    }, SPLASH_DURATION);
+    } else {
+        pinSetupMode = true;
+        showPinSetupScreen();
+    }
+
+}, SPLASH_DURATION);
 
 });
 
@@ -226,6 +299,105 @@ function showPinScreen() {
     enteredPin = "";
 
 }
+
+
+/* =================================
+   FIRST TIME PIN SETUP SCREEN
+================================= */
+
+function showPinSetupScreen() {
+
+    const app = document.getElementById("app");
+
+    app.innerHTML = `
+        <main class="pin-screen">
+
+            <div class="pin-logo">AN</div>
+
+            <h1>ANCHAR</h1>
+
+            <p class="pin-subtitle">
+                PERSONAL DOCUMENT VAULT
+            </p>
+
+            <h2>Create Your PIN</h2>
+
+            <div class="pin-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+
+            <div class="pin-message" id="pin-message">
+                Set your 4-digit security PIN
+            </div>
+
+            <div class="pin-keypad">
+                ${[1,2,3,4,5,6,7,8,9,"",0,"⌫"]
+                    .map(number => `
+                        <button class="pin-key"
+                            data-key="${number}">
+                            ${number}
+                        </button>
+                    `).join("")}
+            </div>
+
+        </main>
+    `;
+
+    enteredPin = "";
+}
+
+
+/* =================================
+   CONFIRM PIN SCREEN
+================================= */
+
+function showConfirmPinScreen() {
+
+    const app = document.getElementById("app");
+
+    app.innerHTML = `
+        <main class="pin-screen">
+
+            <div class="pin-logo">AN</div>
+
+            <h1>ANCHAR</h1>
+
+            <p class="pin-subtitle">
+                PERSONAL DOCUMENT VAULT
+            </p>
+
+            <h2>Confirm Your PIN</h2>
+
+            <div class="pin-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+            </div>
+
+            <div class="pin-message">
+                Enter the same 4-digit PIN again
+            </div>
+
+            <div class="pin-keypad">
+                ${[1,2,3,4,5,6,7,8,9,"",0,"⌫"]
+                    .map(number => `
+                        <button class="pin-key"
+                            data-key="${number}">
+                            ${number}
+                        </button>
+                    `).join("")}
+            </div>
+
+        </main>
+    `;
+
+    enteredPin = "";
+}
+
 
 /* =================================
    DASHBOARD
@@ -879,14 +1051,62 @@ document.addEventListener("click", async (event) => {
             dot.classList.toggle("active", index < enteredPin.length);
         });
 
-        if (enteredPin.length === 4) {
+       
+if (enteredPin.length === 4) {
 
-            setTimeout(() => {
+    setTimeout(async () => {
+
+        const submittedPin = enteredPin;
+        enteredPin = "";
+
+        // FIRST TIME PIN SETUP
+        if (pinSetupMode) {
+
+            if (!firstPin) {
+
+                firstPin = submittedPin;
+                showConfirmPinScreen();
+
+            } else if (submittedPin === firstPin) {
+
+                await savePIN(submittedPin);
+
+                pinSetupMode = false;
+                firstPin = "";
+
+                alert("Your ANCHAR PIN has been created successfully!");
+
                 showDashboard();
-                enteredPin = "";
-            }, 300);
+
+            } else {
+
+                alert("PIN does not match. Please try again.");
+
+                showConfirmPinScreen();
+
+            }
+
+            return;
+        }
+
+        // NORMAL PIN LOGIN
+        const isValid = await verifyPIN(submittedPin);
+
+        if (isValid) {
+
+            showDashboard();
+
+        } else {
+
+            alert("Incorrect PIN. Please try again.");
+
+            showPinScreen();
 
         }
+
+    }, 300);
+
+}
 
         return;
 
