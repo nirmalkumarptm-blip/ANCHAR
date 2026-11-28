@@ -780,32 +780,31 @@ async function openDocument(id, download = false) {
 
             });
 
-            const result = await Filesystem.writeFile({
-
-                path: fileName,
-                data: base64,
-                directory: download ? Directory.Documents : Directory.Cache
-
-            });
-
             if (download) {
 
-                alert("Document saved in ANCHAR Documents storage.");
+    await FileSharer.save({
+        filename: fileName,
+        contentType: "application/pdf",
+        data: base64
+    });
 
-            } else {
+    alert("PDF saved successfully. Check your Downloads folder.");
 
-                await FileOpener.open({
+} else {
 
-                    filePath: result.uri,
-                    contentType: "application/pdf",
-                    openWithDefault: true
+    const result = await Filesystem.writeFile({
+        path: fileName,
+        data: base64,
+        directory: Directory.Cache
+    });
 
-                });
+    await FileOpener.open({
+        filePath: result.uri,
+        contentType: "application/pdf",
+        openWithDefault: true
+    });
 
-            }
-
-            return;
-        }
+}
 
         // Browser version
         const url = URL.createObjectURL(doc.file);
