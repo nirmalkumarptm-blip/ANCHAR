@@ -1,19 +1,15 @@
-
 const fs = require("fs");
 const path = require("path");
+const esbuild = require("esbuild");
 
-const sourceFiles = [
-    "index.html",
-    "style.css",
-    "script.js"
-];
-
-const outputDir = path.join(__dirname, "..", "www");
+const rootDir = path.join(__dirname, "..");
+const outputDir = path.join(rootDir, "www");
 
 fs.mkdirSync(outputDir, { recursive: true });
 
-sourceFiles.forEach(file => {
-    const source = path.join(__dirname, "..", file);
+// Copy HTML and CSS
+["index.html", "style.css"].forEach(file => {
+    const source = path.join(rootDir, file);
     const destination = path.join(outputDir, file);
 
     if (!fs.existsSync(source)) {
@@ -23,9 +19,8 @@ sourceFiles.forEach(file => {
     fs.copyFileSync(source, destination);
 });
 
-// Copy local jsPDF library
-const vendorDir = path.join(__dirname, "..", "vendor");
-const pdfSource = path.join(vendorDir, "jspdf.umd.min.js");
+// Copy jsPDF library
+const pdfSource = path.join(rootDir, "vendor", "jspdf.umd.min.js");
 const pdfDestination = path.join(outputDir, "jspdf.umd.min.js");
 
 if (!fs.existsSync(pdfSource)) {
@@ -34,5 +29,14 @@ if (!fs.existsSync(pdfSource)) {
 
 fs.copyFileSync(pdfSource, pdfDestination);
 
-console.log("ANCHAR web files and jsPDF copied successfully!");
+// Bundle JavaScript and Capacitor plugins
+esbuild.buildSync({
+    entryPoints: [path.join(rootDir, "script.js")],
+    bundle: true,
+    platform: "browser",
+    format: "iife",
+    target: ["es2020"],
+    outfile: path.join(outputDir, "script.js")
+});
 
+console.log("ANCHAR files and Capacitor plugins bundled successfully!");
