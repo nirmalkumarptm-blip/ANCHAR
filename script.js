@@ -2,6 +2,7 @@
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { FileOpener } from "@capacitor-community/file-opener";
 import { Capacitor } from "@capacitor/core";
+import { FileSharer } from "@capgo/capacitor-file-sharer";
 
 /* =================================
    ANCHAR - JAVASCRIPT
