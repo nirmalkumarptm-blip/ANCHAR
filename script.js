@@ -748,6 +748,7 @@ async function getDocumentById(id) {
 
 }
 
+
 async function openDocument(id, download = false) {
 
     try {
@@ -759,9 +760,11 @@ async function openDocument(id, download = false) {
             return;
         }
 
-        const fileName = doc.name
+        const safeName = (doc.name || "Document")
             .replace(/\.pdf$/i, "")
-            .replace(/[^a-zA-Z0-9_-]/g, "_") + ".pdf";
+            .replace(/[^a-zA-Z0-9_-]/g, "_");
+
+        const fileName = (safeName || "Document") + ".pdf";
 
         // Android APK
         if (Capacitor.isNativePlatform()) {
@@ -771,10 +774,18 @@ async function openDocument(id, download = false) {
                 const reader = new FileReader();
 
                 reader.onloadend = () => {
+                    if (
+                        typeof reader.result !== "string" ||
+                        !reader.result.includes(",")
+                    ) {
+                        reject(new Error("Could not read PDF file."));
+                        return;
+                    }
+
                     resolve(reader.result.split(",")[1]);
                 };
 
-                reader.onerror = reject;
+                reader.onerror = () => reject(reader.error);
 
                 reader.readAsDataURL(doc.file);
 
@@ -782,29 +793,35 @@ async function openDocument(id, download = false) {
 
             if (download) {
 
-    await FileSharer.save({
-        filename: fileName,
-        contentType: "application/pdf",
-        data: base64
-    });
+                await FileSharer.save({
+                    filename: fileName,
+                    contentType: "application/pdf",
+                    base64Data: base64,
+                    android: {
+                        saveDirectory: "downloads"
+                    }
+                });
 
-    alert("PDF saved successfully. Check your Downloads folder.");
+                alert("PDF saved successfully. Check your Downloads folder.");
 
-} else {
+            } else {
 
-    const result = await Filesystem.writeFile({
-        path: fileName,
-        data: base64,
-        directory: Directory.Cache
-    });
+                const result = await Filesystem.writeFile({
+                    path: fileName,
+                    data: base64,
+                    directory: Directory.Cache
+                });
 
-    await FileOpener.open({
-        filePath: result.uri,
-        contentType: "application/pdf",
-        openWithDefault: true
-    });
+                await FileOpener.open({
+                    filePath: result.uri,
+                    contentType: "application/pdf",
+                    openWithDefault: true
+                });
 
-}
+            }
+
+            return;
+        }
 
         // Browser version
         const url = URL.createObjectURL(doc.file);
@@ -813,16 +830,12 @@ async function openDocument(id, download = false) {
         link.href = url;
 
         if (download) {
-
             link.download = fileName;
             link.click();
-
         } else {
-
             link.target = "_blank";
             link.rel = "noopener";
             link.click();
-
         }
 
         setTimeout(() => URL.revokeObjectURL(url), 60000);
@@ -830,11 +843,13 @@ async function openDocument(id, download = false) {
     } catch (error) {
 
         alert("Unable to open or download document.");
-        alert("Download error: " + error.message);
-        console.error("ANCHAR DOWNLOAD ERROR:", error);
+        console.error("ANCHAR DOCUMENT ERROR:", error);
+        alert("Error: " + (error?.message || String(error)));
+
     }
 
 }
+
 /* =================================
    ALL APP BUTTON ACTIONS
 ================================= */
