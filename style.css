@@ -595,3 +595,84 @@ body {
     transform: scale(0.96);
 }
 
+
+/* =================================
+   ANCHAR - MULTI VAULT DESIGN
+================================= */
+
+.vault-selector {
+    min-height: 100vh;
+    padding: 30px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.vault-list {
+    width: 100%;
+    max-width: 420px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 30px;
+}
+
+.vault-card {
+    min-height: 150px;
+    padding: 20px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: #211a12;
+    color: #f2d28b;
+    border: 1px solid #b89552;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.vault-card-shield {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #c9a45c;
+    border-radius: 50%;
+    color: #e5c477;
+}
+
+.vault-card small {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: #b9a47d;
+}
+
+.vault-card:active {
+    background: #3a2b19;
+    transform: scale(0.97);
+}
+
+.switch-vault-btn {
+    padding: 9px 14px;
+    background: #211a12;
+    color: #e5c477;
+    border: 1px solid #b89552;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+@media (max-width: 400px) {
+    .vault-list {
+        gap: 10px;
+    }
+
+    .vault-card {
+        min-height: 135px;
+        font-size: 13px;
+    }
+}
