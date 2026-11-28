@@ -23,4 +23,16 @@ sourceFiles.forEach(file => {
     fs.copyFileSync(source, destination);
 });
 
-console.log("ANCHAR web files copied successfully!");
+// Copy local jsPDF library
+const vendorDir = path.join(__dirname, "..", "vendor");
+const pdfSource = path.join(vendorDir, "jspdf.umd.min.js");
+const pdfDestination = path.join(outputDir, "jspdf.umd.min.js");
+
+if (!fs.existsSync(pdfSource)) {
+    throw new Error("Missing jsPDF library in vendor folder.");
+}
+
+fs.copyFileSync(pdfSource, pdfDestination);
+
+console.log("ANCHAR web files and jsPDF copied successfully!");
+
