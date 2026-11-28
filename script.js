@@ -1287,3 +1287,60 @@ function getFolderById(folderId) {
         };
     });
 }
+
+
+/* =================================
+   ANDROID HARDWARE BACK BUTTON
+================================= */
+
+if (Capacitor.isNativePlatform()) {
+
+    App.addListener("backButton", async () => {
+
+        // Close popup first
+        const popup = document.querySelector(".upload-popup");
+
+        if (popup) {
+            popup.remove();
+            return;
+        }
+
+        // Don't exit from PIN screen
+        if (document.querySelector(".pin-screen")) {
+            return;
+        }
+
+        // Folder -> Parent Folder
+        if (activeFolderId !== null) {
+
+            const currentFolder = await getFolderById(activeFolderId);
+
+            activeFolderId = currentFolder
+                ? currentFolder.parentId
+                : null;
+
+            await showDocuments(activeCategory);
+            return;
+        }
+
+        // Documents -> Categories
+        if (document.querySelector(".saved-documents")) {
+            await showCategories();
+            return;
+        }
+
+        // Categories -> Dashboard
+        if (document.querySelector(".category-grid")) {
+            await showDashboard();
+            return;
+        }
+
+        // Dashboard -> Exit App
+        if (document.querySelector(".profile-section")) {
+            await App.exitApp();
+            return;
+        }
+
+    });
+
+}
