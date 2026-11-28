@@ -830,8 +830,8 @@ async function openDocument(id, download = false) {
     } catch (error) {
 
         alert("Unable to open or download document.");
-        console.error(error);
-
+        alert("Download error: " + error.message);
+        console.error("ANCHAR DOWNLOAD ERROR:", error);
     }
 
 }
