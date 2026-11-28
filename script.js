@@ -1,6 +1,7 @@
 
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { FileOpener } from "@capacitor-community/file-opener";
+import { Capacitor } from "@capacitor/core";
 
 /* =================================
    ANCHAR - JAVASCRIPT
@@ -757,15 +758,63 @@ async function openDocument(id, download = false) {
             return;
         }
 
-        const url = URL.createObjectURL(doc.file);
+        const fileName = doc.name
+            .replace(/\.pdf$/i, "")
+            .replace(/[^a-zA-Z0-9_-]/g, "_") + ".pdf";
 
+        // Android APK
+        if (Capacitor.isNativePlatform()) {
+
+            const base64 = await new Promise((resolve, reject) => {
+
+                const reader = new FileReader();
+
+                reader.onloadend = () => {
+                    resolve(reader.result.split(",")[1]);
+                };
+
+                reader.onerror = reject;
+
+                reader.readAsDataURL(doc.file);
+
+            });
+
+            const result = await Filesystem.writeFile({
+
+                path: fileName,
+                data: base64,
+                directory: download ? Directory.Documents : Directory.Cache
+
+            });
+
+            if (download) {
+
+                alert("Document saved in ANCHAR Documents storage.");
+
+            } else {
+
+                await FileOpener.open({
+
+                    filePath: result.uri,
+                    contentType: "application/pdf",
+                    openWithDefault: true
+
+                });
+
+            }
+
+            return;
+        }
+
+        // Browser version
+        const url = URL.createObjectURL(doc.file);
         const link = document.createElement("a");
 
         link.href = url;
 
         if (download) {
 
-            link.download = doc.name + ".pdf";
+            link.download = fileName;
             link.click();
 
         } else {
@@ -780,13 +829,12 @@ async function openDocument(id, download = false) {
 
     } catch (error) {
 
-        alert("Unable to open document.");
+        alert("Unable to open or download document.");
         console.error(error);
 
     }
 
 }
-
 /* =================================
    ALL APP BUTTON ACTIONS
 ================================= */
