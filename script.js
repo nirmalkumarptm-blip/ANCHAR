@@ -594,9 +594,9 @@ async function askDocumentName(file, category) {
 
     try {
 
-        await saveDocument(
+      await saveDocument(
     file,
-    name,
+    customName.trim(),
     category,
     tags,
     activeFolderId
