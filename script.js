@@ -1,4 +1,7 @@
 
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { FileOpener } from "@capacitor-community/file-opener";
+
 /* =================================
    ANCHAR - JAVASCRIPT
    LOCAL DOCUMENT STORAGE
